@@ -15,23 +15,26 @@ logging.basicConfig(level=logging.INFO)
 
 class ChargePoint(cp):
     async def simulate_charging(self, id_tag, connector_id, transaction_id):
+        input("Press to send BootNotificationPayload")
         request = call.BootNotificationPayload(charge_point_model="Optimus", charge_point_vendor="The Mobility House")
         response = await self.call(request)
         if response.status == RegistrationStatus.accepted:
             print("Connected to central system.")
 
+            input("Press to send AuthorizePayload")
             request = call.AuthorizePayload(id_tag=id_tag)
             response = await self.call(request)
             if response.id_tag_info["status"] == AuthorizationStatus.accepted:
-                print(f'Authorized {id_tag} for charging, '
-                      f'parent_id_tag is {response.id_tag_info["parent_id_tag"]} and expiring date is {response.id_tag_info["expiry_date"]}')
+                print(f'Authorized {id_tag} for charging')
 
+                input("Press to send RemoteStartTransactionPayload")
                 request = call.RemoteStartTransactionPayload(id_tag=id_tag)
                 response = await self.call(request)
                 if response.status == RemoteStartStopStatus.accepted:
                     print(f'Accepted {id_tag} to start charging')
 
                     for i in range(0, 5):
+                        input("Press to send MeterValuesPayload")
                         current_value = 6
                         request = call.MeterValuesPayload(connector_id=connector_id, meter_value=[
                             MeterValue(timestamp=datetime.utcnow().isoformat(), sampled_value=[
@@ -62,6 +65,7 @@ class ChargePoint(cp):
                         print("Forwarded meter values to central system")
                         time.sleep(5)
 
+                    input("Press to send RemoteStopTransactionPayload")
                     request = call.RemoteStopTransactionPayload(transaction_id=transaction_id)
                     response = await self.call(request)
                     if response.status == RemoteStartStopStatus.accepted:
@@ -70,7 +74,7 @@ class ChargePoint(cp):
 
 async def main():
     async with websockets.connect(
-            "ws://localhost:9000/CP_1", subprotocols=["ocpp1.6"]
+            "ws://192.168.1.111/CP_5", subprotocols=["ocpp1.6"]
     ) as ws:
         cp = ChargePoint("CP_1", ws)
         await asyncio.gather(
